@@ -1,7 +1,6 @@
 package productcatalog;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class CatalogPresenter implements CatalogContract.UserActions {
 
@@ -44,11 +43,21 @@ public class CatalogPresenter implements CatalogContract.UserActions {
         }
     }
 
+    @Override
+    public void searchProduct(Search search) {
+        catalogRepository.searchProduct(search);
+    }
+
     public void getProductsFromDb() {
-        view.displayProductTable(catalogRepository.getProductList());
+        view.displayProductsTable(catalogRepository.getProductList());
+    }
+
+    public void getProductsNumber() {
+        view.displayFoundProductsNumber(catalogRepository.getProductNumber());
     }
 
     public ArrayList<String> getCategoriesFromDb() {
         return catalogRepository.getCategoryList();
     }
+
 }

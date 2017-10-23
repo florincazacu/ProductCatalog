@@ -12,6 +12,10 @@ public interface CatalogRepository {
 
     ArrayList<Product> getProductList();
 
-    public ArrayList<String> getCategoryList();
+    ArrayList<String> getCategoryList();
+
+    void searchProduct(Search search);
+    
+    int getProductNumber();
 
 }

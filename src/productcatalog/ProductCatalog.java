@@ -20,6 +20,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private final CatalogPresenter catalogPresenter;
     private DefaultTableModel defaultTableModel;
     private final String[] colors = {"-ANY-", "BLACK", "BLUE", "BROWN", "GRAY", "GREEN", "MAGENTA", "ORANGE", "RED", "WHITE", "YELLOW"};
+    private final String[] intemsPerPage = {"25", "50", "100"};
     private TableRowSorter<TableModel> rowSorter;
 
     /**
@@ -51,6 +52,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private void fillComboBoxes() {
         fillCategoryComboBoxes();
         fillColorSetterComboBox();
+        fillItemsPerPageComboBox();
     }
 
     private void disableButons() {
@@ -70,13 +72,9 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         });
     }
 
-    private void populateProductsJTable() {
-        try {
-            catalogPresenter.getProductsFromDb();
-            setFoundProductsNumber(productsCatalogTable.getRowCount());
-        } catch (Exception e) {
-            System.out.println("populateProductsJTable " + e);
-        }
+    private void populateProductsJTable() {        
+        catalogPresenter.getProductsFromDb();
+        catalogPresenter.getProductsNumber();
     }
 
     private void createTableModel() {
@@ -110,8 +108,8 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private void searchProduct() {
         List<RowFilter<Object, Object>> filters = new ArrayList<>();
         String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
-        double lowerPrice = -1;
-        double higherPrice = -1;
+        Double lowerPrice = null;
+        Double higherPrice = null;
         if (!"".equals(searchPriceFromTextField.getText())) {
             lowerPrice = Double.parseDouble(searchPriceFromTextField.getText());
         }
@@ -127,11 +125,11 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
             System.out.println("name " + name);
             filters.add(RowFilter.regexFilter("(?i)" + name, 1));
         }
-        if (lowerPrice >= 0) {
+        if (lowerPrice != null) {
             System.out.println("lowerPrice " + lowerPrice);
             filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.AFTER, lowerPrice - 1, 2));
         }
-        if (higherPrice >= 0) {
+        if (higherPrice != null) {
             System.out.println("higherPrice " + higherPrice);
             filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.BEFORE, higherPrice + 1, 2));
         }
@@ -161,17 +159,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         RowFilter<Object, Object> productFilter = RowFilter.andFilter(filters);
         rowSorter.setRowFilter(productFilter);
         productsCatalogTable.setRowSorter(rowSorter);
-        setFoundProductsNumber(productsCatalogTable.getRowCount());
-    }
-
-    private void setFoundProductsNumber(int foundProductsNumber) {
-        switch (foundProductsNumber) {
-            case 1:
-                totalRecordsLabel.setText("Total " + foundProductsNumber + " product");
-                break;
-            default:
-                totalRecordsLabel.setText("Total " + foundProductsNumber + " products");
-        }
+        catalogPresenter.getProductsNumber();
     }
 
     private void deleteProducts() {
@@ -268,15 +256,24 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
             categoryName = setCategoryComboBox.getSelectedItem().toString();
             categoryId = (catalogPresenter.getCategoriesFromDb().indexOf(categoryName)) + 1;
         }
-        Product product = new Product.ProductBuilder()
-                .name(name)
-                .price(price)
+Product product = null;
+        for(int i = 0; i < 3000; i++){
+            if (i%2 == 0){
+                inStock = true;
+            } else {
+                inStock = false;
+            }
+        Product product1 = new Product.ProductBuilder()
+                .name(name + i)
+                .price(price + i)
                 .color(color)
                 .inStock(inStock)
                 .expiringDate(expiringDate)
                 .categoryName(categoryName)
                 .categoryId(categoryId)
                 .build();
+        catalogPresenter.addProduct(product1);
+        }
         return product;
     }
 
@@ -292,11 +289,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         setExpiringDatePicker.setDate(null);
     }
 
-
-//    private void enableMainWindow() {
-//        this.setEnabled(true);
-//    }
-
     public void confirmAddProduct() {
         catalogPresenter.addProduct(createProductFromFieldsEntry());
         refreshJTable();
@@ -309,14 +301,29 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         emptyFields();
         addProductDialog.dispose();
     }
+    
+    private void displayPagesNumber(){
+//        a
+    }
 
     @Override
-    public void displayProductTable(ArrayList<Product> products) {
+    public void displayProductsTable(ArrayList<Product> products) {
         products.forEach((product) -> {
             defaultTableModel.insertRow(productsCatalogTable.getRowCount(),
                     new Object[]{product.getId(), product.getName(), product.getPrice(), product.getColor(), product.getInStock(),
                         product.getExpiringDate(), product.getCategoryName(), product.getCategoryId()});
         });
+    }
+
+    @Override
+    public void displayFoundProductsNumber(int foundProductsNumber) {
+        switch (foundProductsNumber) {
+            case 1:
+                totalRecordsLabel.setText("Total " + foundProductsNumber + " product");
+                break;
+            default:
+                totalRecordsLabel.setText("Total " + foundProductsNumber + " products");
+        }
     }
 
     private void fillCategoryComboBoxes() {
@@ -331,6 +338,13 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         ArrayList<String> colorsList = new ArrayList<>(Arrays.asList(colors));
         colorsList.remove(0);
         setColorComboBox.setModel(new DefaultComboBoxModel(colorsList.toArray()));
+    }
+
+    private void fillItemsPerPageComboBox() {
+        itemsPerPageComboBox.setModel(new DefaultComboBoxModel(intemsPerPage));
+        ArrayList<String> itemsPerPageList = new ArrayList<>(Arrays.asList(intemsPerPage));
+        itemsPerPageComboBox.setModel(new DefaultComboBoxModel(itemsPerPageList.toArray()));
+
     }
 
     @Override
@@ -404,7 +418,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         navigationPanel = new javax.swing.JPanel();
         pageLabel = new javax.swing.JLabel();
         previousPageButton = new javax.swing.JButton();
-        pagesTextField = new javax.swing.JTextField();
+        pagesTextField = new javax.swing.JFormattedTextField();
         nextPageButton = new javax.swing.JButton();
         ofPagesLabel = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
@@ -416,7 +430,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
 
         addProductDialog.setAlwaysOnTop(true);
         addProductDialog.setMinimumSize(new java.awt.Dimension(450, 340));
-        addProductDialog.setPreferredSize(new java.awt.Dimension(450, 340));
 
         jPanel1.setMinimumSize(new java.awt.Dimension(450, 290));
         jPanel1.setPreferredSize(new java.awt.Dimension(390, 280));
@@ -823,12 +836,14 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
         gridBagConstraints.insets = new java.awt.Insets(0, 10, 0, 10);
         navigationPanel.add(previousPageButton, gridBagConstraints);
+
+        pagesTextField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(new javax.swing.text.NumberFormatter(new java.text.DecimalFormat("#0"))));
+        pagesTextField.setHorizontalAlignment(javax.swing.JTextField.CENTER);
+        pagesTextField.setText("1");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.ipadx = 30;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
         navigationPanel.add(pagesTextField, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
@@ -955,7 +970,8 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     }//GEN-LAST:event_exitApplicationButtonActionPerformed
 
     private void searchButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchButtonActionPerformed
-        searchProduct();
+//        searchProduct();
+        searchProductWithPaging();
     }//GEN-LAST:event_searchButtonActionPerformed
 
     private void deleteProductButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteProductButtonActionPerformed
@@ -1001,7 +1017,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private javax.swing.JLabel ofPagesLabel;
     private javax.swing.JButton okAddProductButton;
     private javax.swing.JLabel pageLabel;
-    private javax.swing.JTextField pagesTextField;
+    private javax.swing.JFormattedTextField pagesTextField;
     private javax.swing.JLabel perPageLabel;
     private javax.swing.JButton previousPageButton;
     private javax.swing.JLabel priceLabel;
@@ -1065,5 +1081,73 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 new ProductCatalog().setVisible(true);
             }
         });
+    }
+
+    private void searchProductWithPaging() {
+        String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
+        Double lowerPrice = null;
+        Double higherPrice = null;
+
+        if (!"".equals(searchPriceFromTextField.getText())) {
+            lowerPrice = Double.parseDouble(searchPriceFromTextField.getText());
+        }
+        if (!"".equals(searchPriceToTextField.getText())) {
+            higherPrice = Double.parseDouble(searchPriceToTextField.getText());
+        }
+
+        String color = colorFilterComboBox.getSelectedItem().toString();
+        String category = categoryFilterComboBox.getSelectedItem().toString();
+        boolean inStock = inStockCheckBox.isSelected();
+        Date lowerExpiringDate = fromDatePicker.getDate();
+        Date higherExpiringDate = toDatePicker.getDate();
+
+        Search search = new Search.SearchBuilder()
+                .name(name)
+                .lowerPrice(lowerPrice)
+                .higherPrice(higherPrice)
+                .color(color)
+                .inStock(inStock)
+                .lowerExpiringDate(lowerExpiringDate)
+                .higherExpiringDate(higherExpiringDate)
+                .category(category)
+                .build();
+
+        catalogPresenter.searchProduct(search);
+
+//        if (name != null) {
+//            System.out.println("name " + name);
+//            filters.add(RowFilter.regexFilter("(?i)" + name, 1));
+//        }
+//        if (lowerPrice != null) {
+//            System.out.println("lowerPrice " + lowerPrice);
+//            filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.AFTER, lowerPrice - 1, 2));
+//        }
+//        if (higherPrice != null) {
+//            System.out.println("higherPrice " + higherPrice);
+//            filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.BEFORE, higherPrice + 1, 2));
+//        }
+//        if (!"-ANY-".equals(color)) {
+//            System.out.println("color " + color);
+//            filters.add(RowFilter.regexFilter(color, 3));
+//        } else if ("-ANY-".equals(color)) {
+//            filters.remove(RowFilter.regexFilter(color, 3));
+//        }
+//        if (inStock) {
+//            filters.add(RowFilter.regexFilter(String.valueOf(inStock), 4));
+//        }
+//        if (lowerExpiringDate != null) {
+//            System.out.println("lowerExpiringDate " + lowerExpiringDate);
+//            filters.add(RowFilter.dateFilter(RowFilter.ComparisonType.AFTER, lowerExpiringDate, 5));
+//        }
+//        if (higherExpiringDate != null) {
+//            System.out.println("higherExpiringDate " + higherExpiringDate);
+//            filters.add(RowFilter.dateFilter(RowFilter.ComparisonType.BEFORE, higherExpiringDate, 5));
+//        }
+//        if (!"-ANY-".equals(category)) {
+//            System.out.println("category " + category);
+//            filters.add(RowFilter.regexFilter(category, 6));
+//        } else if ("-ANY-".equals(category)) {
+//            filters.remove(RowFilter.regexFilter(category, 6));
+//        }        
     }
 }

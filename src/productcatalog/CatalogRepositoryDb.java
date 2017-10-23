@@ -36,13 +36,13 @@ public class CatalogRepositoryDb implements CatalogRepository {
             ResultSet productCategoryResultSet = connection.getMetaData().getTables(null, "USERNAME", "PRODUCT_CATEGORY", null);
             if (!productCategoryResultSet.next()) {
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sqlCreateProductCategory)) {
-                    preparedStatement.executeUpdate(sqlCreateProductCategory);
+                    preparedStatement.executeUpdate();
                     addCategory();
                     productCategoryResultSet.close();
                 }
                 disconnectFromDb();
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             System.out.println("product category " + e.getMessage());
         }
     }
@@ -55,16 +55,16 @@ public class CatalogRepositoryDb implements CatalogRepository {
                     + "name             VARCHAR(50),"
                     + "price            DOUBLE,"
                     + "color            VARCHAR(20),"
-                    + "availability     BOOLEAN,"
+                    + "in_stock         BOOLEAN,"
                     + "expiring_date    DATE,"
-                    + "category_name    VARCHAR(20),"
+                    + "category_name    VARCHAR(50),"
                     + "category_id      INTEGER,"
-                    + "FOREIGN KEY (category_id) REFERENCES product_category(category_id)"
+                    + "FOREIGN KEY (category_id) REFERENCES product_category(category_id) "
                     + ")";
             ResultSet productCatalogResultSet = connection.getMetaData().getTables(null, "USERNAME", "PRODUCT_CATALOG", null);
             if (!productCatalogResultSet.next()) {
                 try (PreparedStatement preparedStatement = connection.prepareStatement(sqlCreateProductCatalog)) {
-                    preparedStatement.executeUpdate(sqlCreateProductCatalog);
+                    preparedStatement.executeUpdate();
                     System.out.println("product catalog created");
                     productCatalogResultSet.close();
                 }
@@ -106,7 +106,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
     public void addProduct(Product product) {
         connectToDb();
         String addProductSQL = "INSERT INTO " + productCatalogDb
-                + "(NAME, PRICE, COLOR, AVAILABILITY, EXPIRING_DATE, CATEGORY_ID) VALUES"
+                + "(NAME, PRICE, COLOR, IN_STOCK, EXPIRING_DATE, CATEGORY_ID) VALUES"
                 + "(?,?,?,?,?,?)";
         try {
 
@@ -142,7 +142,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
 
     @Override
     public void modifyProduct(Product product, int productId) {
-        String sql = "UPDATE " + productCatalogDb + " SET name = ?, price = ?, color = ?, availability = ?, expiring_date = ?, category_id = ? WHERE product_id = ?";
+        String sql = "UPDATE " + productCatalogDb + " SET name = ?, price = ?, color = ?, in_stock = ?, expiring_date = ?, category_id = ? WHERE product_id = ?";
         try {
             connectToDb();
             try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -176,16 +176,44 @@ public class CatalogRepositoryDb implements CatalogRepository {
     }
 
     @Override
+    public int getProductNumber() {
+        connectToDb();
+        int count = 0;
+        String rowCounter = "SELECT COUNT(*) AS count FROM " + productCatalogDb;
+        try {
+            try (ResultSet countRs = createStatement().executeQuery(rowCounter)) {
+                while (countRs.next()) {
+                    count = countRs.getInt(1);
+                }
+            }
+            disconnectFromDb();
+        } catch (SQLException e) {
+            System.out.println("getProductNumber " + e.getMessage());
+        }
+
+        return count;
+    }
+    
+    public int getPageCount(){
+                
+        return 0;
+    }
+
+    @Override
     public ArrayList<Product> getProductList() {
         connectToDb();
         ArrayList<Product> productList = new ArrayList<>();
         String name, color, categoryName;
         double price;
-        boolean availability;
+        boolean inStock;
         Date expiringDate;
         int categoryId, productId;
-        String query = "SELECT * FROM " + productCategoryDb + " JOIN " + productCatalogDb + " ON ( "
-                + productCategoryDb + ".category_id = " + productCatalogDb + ".category_id)";
+//        String query = "SELECT * FROM (SELECT ROW_NUMBER() OVER() AS rownum, " + productCatalogDb + ".*"
+//                + " FROM " + productCatalogDb + " ) AS tmp WHERE rownum > 0 AND rownum <= 25";
+        
+       String query = "SELECT * FROM ( SELECT ROW_NUMBER() OVER() AS rownum, "+ productCatalogDb + ".*" + 
+               " FROM " + productCategoryDb + " JOIN " + productCatalogDb + 
+               " ON ( " + productCategoryDb + ".category_id = " + productCatalogDb + ".category_id)) AS tmp WHERE rownum > 30 AND rownum <= 50";
 
         try (ResultSet resultSet = createStatement().executeQuery(query)) {
             while (resultSet.next()) {
@@ -193,23 +221,22 @@ public class CatalogRepositoryDb implements CatalogRepository {
                 name = resultSet.getString("name");
                 price = resultSet.getDouble("price");
                 color = resultSet.getString("color");
-                availability = resultSet.getBoolean("availability");
+                inStock = resultSet.getBoolean("in_stock");
                 expiringDate = resultSet.getDate("expiring_date");
                 categoryName = resultSet.getString("category_name");
                 categoryId = resultSet.getInt("category_id");
                 Product product = new Product.ProductBuilder()
-                        .id(productId)
+//                        .id(productId)
                         .name(name)
                         .price(price)
                         .color(color)
-                        .inStock(availability)
+                        .inStock(inStock)
                         .expiringDate(expiringDate)
                         .categoryName(categoryName)
                         .categoryId(categoryId)
                         .build();
                 productList.add(product);
             }
-
             disconnectFromDb();
         } catch (Exception e) {
             System.out.println("getProductList " + e);
@@ -218,6 +245,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
     }
 
     private void createCategoryList() {
+        connectToDb();
         categoryNames.add("-ANY-");
         String categoryName;
         String query = "SELECT * FROM " + productCategoryDb;
@@ -226,6 +254,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
                 categoryName = resultSet.getString("category_name");
                 categoryNames.add(categoryName);
             }
+            disconnectFromDb();            
         } catch (Exception e) {
             System.out.println("getCategoryList " + e);
         }
@@ -234,6 +263,11 @@ public class CatalogRepositoryDb implements CatalogRepository {
     @Override
     public ArrayList getCategoryList() {
         return categoryNames;
+    }
+
+    @Override
+    public void searchProduct(Search search) {
+        String sql = "SELECT FROM " + productCatalogDb + " WHERE name = ?, price = ?, color = ?, in_stock = ?, expiring_date = ?, category_id = ? LIMIT 25, 25";
     }
 
 }
