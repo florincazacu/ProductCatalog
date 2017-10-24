@@ -7,6 +7,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -276,96 +277,77 @@ public class CatalogRepositoryDb implements CatalogRepository {
         int categoryId, productId;
 
         StringBuilder searchQueryStart = new StringBuilder();
-        searchQueryStart.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE ( ");
+        searchQueryStart.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE 1 = 1 ");
         StringBuilder searchQueryEnd = new StringBuilder();
         if (search.getName() != null) {
-            searchQueryEnd.append("UPPER (name) like UPPER ('%").append(search.getName()).append("%') ");
+            searchQueryEnd.append("AND UPPER (name) like UPPER ('%").append(search.getName()).append("%') ");
         }
+
         if (search.getLowerPrice() != null) {
             searchQueryEnd.append("AND price >= ").append(search.getLowerPrice()).append(" ");
         }
+
         if (search.getHigherPrice() != null) {
             searchQueryEnd.append("AND price <= ").append(search.getHigherPrice()).append(" ");
         }
+
         if (search.getColor() != null && !search.getColor().equals("-ANY-")) {
             searchQueryEnd.append("AND color = '").append(search.getColor()).append("' ");
         }
+
         if (search.getLowerDate() != null) {
-            searchQueryEnd.append("AND expiring_date >= ").append(search.getLowerDate()).append(" ");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyy-MM-dd");
+            searchQueryEnd.append("AND expiring_date >= '").append(sdf.format(search.getLowerDate())).append("' ");
         }
+
         if (search.getHigherDate() != null) {
-            searchQueryEnd.append("AND expiring_date <= ").append(search.getHigherDate()).append(" ");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyy-MM-dd");
+            searchQueryEnd.append("AND expiring_date <= '").append(sdf.format(search.getHigherDate())).append("' ");
         }
+
         if (search.getCategory() != null && !search.getCategory().equals("-ANY-")) {
-            searchQueryEnd.append("AND color = '").append(search.getCategory()).append("' ) ");
+            searchQueryEnd.append("AND category_name = '").append(search.getCategory()).append("' ");
         }
-        
+
         StringBuilder searchQuery = new StringBuilder();
-        
-        searchQuery.append(searchQueryStart).append(searchQueryEnd).append(")");
-        
+
+        searchQuery.append(searchQueryStart).append(searchQueryEnd);
+
         searchQueryStart.append(searchQueryEnd).append(")");
 
-        if (searchQueryEnd.length() > 0) {
-            try {
-                connectToDb();
-                try (PreparedStatement preparedStatement = connection.prepareStatement(searchQuery.toString())) {
-                    preparedStatement.executeQuery();
-                    ResultSet resultSet = preparedStatement.executeQuery();
-                    while (resultSet.next()) {
-                        productId = resultSet.getInt("product_id");
-                        name = resultSet.getString("name");
-                        price = resultSet.getDouble("price");
-                        color = resultSet.getString("color");
-                        inStock = resultSet.getBoolean("in_stock");
-                        expiringDate = resultSet.getDate("expiring_date");
-                        categoryName = resultSet.getString("category_name");
-                        categoryId = resultSet.getInt("category_id");
-                        Product product = new Product.ProductBuilder()
-                                .id(productId)
-                                .name(name)
-                                .price(price)
-                                .color(color)
-                                .inStock(inStock)
-                                .expiringDate(expiringDate)
-                                .categoryName(categoryName)
-                                .categoryId(categoryId)
-                                .build();
-                        productList.add(product);
-                    }
-                }
-                disconnectFromDb();
-            } catch (SQLException ex) {
-                Logger.getLogger(CatalogRepositoryDb.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
+        System.out.println("searchQuery " + searchQuery);
 
-//        try {
-//            connectToDb();
-//            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-//                preparedStatement.setString(1, search.getName());
-//                preparedStatement.setDouble(2, search.getPrice());
-//                preparedStatement.setString(3, product.getColor());
-//                preparedStatement.setBoolean(4, product.getInStock());
-//                preparedStatement.setDate(5, (new java.sql.Date(product.getExpiringDate().getTime())));
-//                preparedStatement.setInt(6, product.getCategoryId());
-//                preparedStatement.setInt(7, productId);
-//                preparedStatement.executeUpdate();
-//
-////                pstmt = conn.prepareStatement("select * FROM Courses WHERE "
-////                        + "product = ? "
-////                        + "and location = ? "
-////                        + "and courseType = ? "
-////                        + "and category = ?");
-//                preparedStatement.setString(1, product);
-//                preparedStatement.setString(2, location);
-//                preparedStatement.setString(3, courseType);
-//                preparedStatement.setString(4, category);
-//            }
-//            disconnectFromDb();
-//        } catch (SQLException e) {
-//            System.out.println("modifyProduct" + e.getMessage());
-//        }
+        try {
+            connectToDb();
+            try (PreparedStatement preparedStatement = connection.prepareStatement(searchQuery.toString())) {
+                preparedStatement.executeQuery();
+                ResultSet resultSet = preparedStatement.executeQuery();
+                while (resultSet.next()) {
+                    productId = resultSet.getInt("product_id");
+                    name = resultSet.getString("name");
+                    price = resultSet.getDouble("price");
+                    color = resultSet.getString("color");
+                    inStock = resultSet.getBoolean("in_stock");
+                    expiringDate = resultSet.getDate("expiring_date");
+                    categoryName = resultSet.getString("category_name");
+                    categoryId = resultSet.getInt("category_id");
+                    Product product = new Product.ProductBuilder()
+                            .id(productId)
+                            .name(name)
+                            .price(price)
+                            .color(color)
+                            .inStock(inStock)
+                            .expiringDate(expiringDate)
+                            .categoryName(categoryName)
+                            .categoryId(categoryId)
+                            .build();
+                    productList.add(product);
+                }
+            }
+            disconnectFromDb();
+        } catch (SQLException ex) {
+            Logger.getLogger(CatalogRepositoryDb.class.getName()).log(Level.SEVERE, null, ex);
+        }
         return productList;
     }
 

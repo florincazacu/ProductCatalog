@@ -2,6 +2,7 @@ package productcatalog;
 
 import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeEvent;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -9,6 +10,8 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JCheckBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JOptionPane;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.plaf.basic.BasicArrowButton;
 import javax.swing.table.DefaultTableModel;
@@ -21,7 +24,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private DefaultTableModel defaultTableModel;
     private final String[] colors = {"-ANY-", "BLACK", "BLUE", "BROWN", "GRAY", "GREEN", "MAGENTA", "ORANGE", "RED", "WHITE", "YELLOW"};
     private final Integer[] intemsPerPage = {25, 50, 100};
-    private TableRowSorter<TableModel> rowSorter;
     int currentPage = 1;
     int maxPage = -1;
 
@@ -39,13 +41,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         catalogPresenter.getCategoriesFromDb();
         addRowSelectionListener();
         setupSearchTextFields();
-        setupNavigationButtons();
         lockLowerDate();
-    }
-
-    private void setupNavigationButtons() {
-        previousPageButton.add(new BasicArrowButton(BasicArrowButton.WEST));
-        nextPageButton.add(new BasicArrowButton(BasicArrowButton.EAST));
     }
 
     private void setupTable() {
@@ -74,6 +70,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
             Date selectedDate = fromDatePicker.getDate();
             toDatePicker.getMonthView().setLowerBound(selectedDate);
         });
+        setExpiringDatePicker.getMonthView().setLowerBound(new Date());
     }
 
     private void populateProductsJTable() {
@@ -107,7 +104,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         productsCatalogTable.setModel(defaultTableModel);
         productsCatalogTable.setAutoCreateRowSorter(true);
         productsCatalogTable.setDefaultEditor(Object.class, null);
-        rowSorter = new TableRowSorter<>(productsCatalogTable.getModel());
         hideIdColumns();
     }
 
@@ -131,62 +127,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         }
     }
 
-//    private void searchProduct() {
-//        List<RowFilter<Object, Object>> filters = new ArrayList<>();
-//        String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
-//        Double lowerPrice = null;
-//        Double higherPrice = null;
-//        if (!"".equals(searchPriceFromTextField.getText())) {
-//            lowerPrice = Double.parseDouble(searchPriceFromTextField.getText());
-//        }
-//        if (!"".equals(searchPriceToTextField.getText())) {
-//            higherPrice = Double.parseDouble(searchPriceToTextField.getText());
-//        }
-//        String color = colorFilterComboBox.getSelectedItem().toString();
-//        String category = categoryFilterComboBox.getSelectedItem().toString();
-//        boolean inStock = inStockCheckBox.isSelected();
-//        Date lowerExpiringDate = fromDatePicker.getDate();
-//        Date higherExpiringDate = toDatePicker.getDate();
-//        if (name != null) {
-//            System.out.println("name " + name);
-//            filters.add(RowFilter.regexFilter("(?i)" + name, 1));
-//        }
-//        if (lowerPrice != null) {
-//            System.out.println("lowerPrice " + lowerPrice);
-//            filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.AFTER, lowerPrice - 1, 2));
-//        }
-//        if (higherPrice != null) {
-//            System.out.println("higherPrice " + higherPrice);
-//            filters.add(RowFilter.numberFilter(RowFilter.ComparisonType.BEFORE, higherPrice + 1, 2));
-//        }
-//        if (!"-ANY-".equals(color)) {
-//            System.out.println("color " + color);
-//            filters.add(RowFilter.regexFilter(color, 3));
-//        } else if ("-ANY-".equals(color)) {
-//            filters.remove(RowFilter.regexFilter(color, 3));
-//        }
-//        if (inStock) {
-//            filters.add(RowFilter.regexFilter(String.valueOf(inStock), 4));
-//        }
-//        if (lowerExpiringDate != null) {
-//            System.out.println("lowerExpiringDate " + lowerExpiringDate);
-//            filters.add(RowFilter.dateFilter(RowFilter.ComparisonType.AFTER, lowerExpiringDate, 5));
-//        }
-//        if (higherExpiringDate != null) {
-//            System.out.println("higherExpiringDate " + higherExpiringDate);
-//            filters.add(RowFilter.dateFilter(RowFilter.ComparisonType.BEFORE, higherExpiringDate, 5));
-//        }
-//        if (!"-ANY-".equals(category)) {
-//            System.out.println("category " + category);
-//            filters.add(RowFilter.regexFilter(category, 6));
-//        } else if ("-ANY-".equals(category)) {
-//            filters.remove(RowFilter.regexFilter(category, 6));
-//        }
-//        RowFilter<Object, Object> productFilter = RowFilter.andFilter(filters);
-//        rowSorter.setRowFilter(productFilter);
-//        productsCatalogTable.setRowSorter(rowSorter);
-//        catalogPresenter.getProductsNumber();
-//    }
     private void deleteProducts() {
         int[] selectedRows = productsCatalogTable.getSelectedRows();
         String selectedProductsId = "";
@@ -221,7 +161,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     @Override
     public void displayAddProductForm() {
         showAddProductDialog();
-        setExpiringDatePicker.getMonthView().setLowerBound(new Date());
+
     }
 
     private void showAddProductDialog() {
@@ -281,9 +221,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
             categoryName = setCategoryComboBox.getSelectedItem().toString();
             categoryId = (catalogPresenter.getCategoriesFromDb().indexOf(categoryName)) + 1;
         }
-//        Product product = null;
-//        for (int i = 1; i <= 3000; i++) {
-//            inStock = i % 2 == 0;
         Product product = new Product.ProductBuilder()
                 .name(name)
                 .price(price)
@@ -293,9 +230,53 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 .categoryName(categoryName)
                 .categoryId(categoryId)
                 .build();
-//            catalogPresenter.addProduct(product1);
-//        }
+
         return product;
+    }
+
+    private void searchProduct() {
+        String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
+        Double lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
+        Double higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
+
+        String color = colorFilterComboBox.getSelectedItem().toString();
+        String category = categoryFilterComboBox.getSelectedItem().toString();
+        boolean inStock = inStockCheckBox.isSelected();
+        Date lowerExpiringDate = fromDatePicker.getDate();
+        Date higherExpiringDate = toDatePicker.getDate();
+        System.out.println("higherExpDate " + higherExpiringDate);
+        System.out.println("lowerExpiringDate " + lowerExpiringDate);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-M-yyy");
+
+        Search search = new Search.SearchBuilder()
+                .name(name)
+                .lowerPrice(lowerPrice)
+                .higherPrice(higherPrice)
+                .color(color)
+                .inStock(inStock)
+                .lowerExpiringDate(lowerExpiringDate)
+                .higherExpiringDate(higherExpiringDate)
+                .category(category)
+                .build();
+
+        catalogPresenter.searchProduct(search);
+    }
+
+    @Override
+    public void displayPage() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void displaySearchResults(ArrayList<Product> products) {
+        if (products.size() > 0) {
+            defaultTableModel.setRowCount(0);
+            products.forEach((product) -> {
+                defaultTableModel.insertRow(productsCatalogTable.getRowCount(),
+                        new Object[]{product.getId(), product.getName(), product.getPrice(), product.getColor(), product.getInStock(),
+                            product.getExpiringDate(), product.getCategoryName(), product.getCategoryId()});
+            });
+        }
     }
 
     private void showModifyProductDialog() {
@@ -859,6 +840,13 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
         gridBagConstraints.insets = new java.awt.Insets(0, 10, 0, 0);
         navigationPanel.add(pageLabel, gridBagConstraints);
+
+        previousPageButton.setText("<");
+        previousPageButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                previousPageButtonActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 0;
@@ -878,6 +866,13 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         gridBagConstraints.gridy = 0;
         gridBagConstraints.ipadx = 30;
         navigationPanel.add(pagesTextField, gridBagConstraints);
+
+        nextPageButton.setText(">");
+        nextPageButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                nextPageButtonActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 3;
         gridBagConstraints.gridy = 0;
@@ -1024,31 +1019,72 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         productsCatalogTable.setRowSorter(null);
     }//GEN-LAST:event_unsortTableButtonActionPerformed
 
+    private void itemsPerPageComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemsPerPageComboBoxActionPerformed
+        int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
+        catalogPresenter.getPagesNumber((int) itemsPerPageComboBox.getSelectedItem());
+        catalogPresenter.getProductsFromDb(currentPage, itemsPerPage);
+    }//GEN-LAST:event_itemsPerPageComboBoxActionPerformed
+
+    private void nextPageButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_nextPageButtonActionPerformed
+        currentPage = Integer.parseInt(pagesTextField.getText());
+        int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
+        System.out.println("maxP " + maxPage);
+        System.out.println("currP " + currentPage);
+        if (currentPage > maxPage) {
+            currentPage = maxPage - 1;
+        }
+        System.out.println("currP " + currentPage);
+        if (currentPage < maxPage) {
+            int nextPage = ++currentPage;
+
+            defaultTableModel.setRowCount(0);
+            catalogPresenter.goToPage(nextPage, itemsPerPage);
+            pagesTextField.setText(String.valueOf(nextPage));
+            previousPageButton.setEnabled(true);
+            if (currentPage == maxPage) {
+                nextPageButton.setEnabled(false);
+            }
+        }
+    }//GEN-LAST:event_nextPageButtonActionPerformed
+
+    private void previousPageButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_previousPageButtonActionPerformed
+        currentPage = Integer.parseInt(pagesTextField.getText());
+        int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
+        if (currentPage > 1) {
+            int previousPage = --currentPage;
+            if (previousPage > maxPage) {
+                previousPage = maxPage;
+            }
+            defaultTableModel.setRowCount(0);
+            catalogPresenter.goToPage(previousPage, itemsPerPage);
+            pagesTextField.setText(String.valueOf(previousPage));
+            nextPageButton.setEnabled(true);
+            if (currentPage <= 1) {
+                previousPageButton.setEnabled(false);
+            }
+        }
+    }//GEN-LAST:event_previousPageButtonActionPerformed
+
     private void pagesTextFieldKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_pagesTextFieldKeyPressed
         Integer requestedPage = TextUtils.isEmpty(pagesTextField.getText()) ? null : Integer.parseInt(pagesTextField.getText());
-        System.out.println("requestedPage " + requestedPage);
         int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
         if (evt.getKeyCode() == KeyEvent.VK_ENTER && requestedPage != null) {
             catalogPresenter.getPagesNumber((int) itemsPerPageComboBox.getSelectedItem());
             if (TextUtils.isEmpty(pagesTextField.getText())) {
                 JOptionPane.showMessageDialog(null, "Invalid page number", "Go to page", JOptionPane.ERROR_MESSAGE);
             }
-            System.out.println("enter pressed " + requestedPage + " " + itemsPerPage);
             if (requestedPage > 0 && requestedPage <= maxPage) {
                 defaultTableModel.setRowCount(0);
                 catalogPresenter.goToPage(requestedPage, itemsPerPage);
                 if (requestedPage == 1) {
-                    System.out.println("req1 " + requestedPage);
                     previousPageButton.setEnabled(false);
                     nextPageButton.setEnabled(true);
                 }
                 if (requestedPage > 1 && requestedPage < maxPage) {
-                    System.out.println("req2 " + requestedPage);
                     previousPageButton.setEnabled(true);
                     previousPageButton.setEnabled(true);
                 }
                 if (requestedPage == maxPage) {
-                    System.out.println("req3 " + requestedPage);
                     previousPageButton.setEnabled(true);
                     nextPageButton.setEnabled(false);
                 }
@@ -1058,12 +1094,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
             }
         }
     }//GEN-LAST:event_pagesTextFieldKeyPressed
-
-    private void itemsPerPageComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_itemsPerPageComboBoxActionPerformed
-        int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
-        catalogPresenter.getPagesNumber((int) itemsPerPageComboBox.getSelectedItem());
-        catalogPresenter.getProductsFromDb(currentPage, itemsPerPage);
-    }//GEN-LAST:event_itemsPerPageComboBoxActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addProductButton;
@@ -1158,47 +1188,5 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 new ProductCatalog().setVisible(true);
             }
         });
-    }
-
-    private void searchProduct() {
-        String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
-        Double lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
-        Double higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
-
-        String color = colorFilterComboBox.getSelectedItem().toString();
-        String category = categoryFilterComboBox.getSelectedItem().toString();
-        boolean inStock = inStockCheckBox.isSelected();
-        Date lowerExpiringDate = fromDatePicker.getDate();
-        Date higherExpiringDate = toDatePicker.getDate();
-
-        Search search = new Search.SearchBuilder()
-                .name(name)
-                .lowerPrice(lowerPrice)
-                .higherPrice(higherPrice)
-                .color(color)
-                .inStock(inStock)
-                .lowerExpiringDate(lowerExpiringDate)
-                .higherExpiringDate(higherExpiringDate)
-                .category(category)
-                .build();
-
-        catalogPresenter.searchProduct(search);
-    }
-
-    @Override
-    public void displayPage() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public void displaySearchResults(ArrayList<Product> products) {
-        if (products.size() > 0){
-        defaultTableModel.setRowCount(0);
-        products.forEach((product) -> {
-            defaultTableModel.insertRow(productsCatalogTable.getRowCount(),
-                    new Object[]{product.getId(), product.getName(), product.getPrice(), product.getColor(), product.getInStock(),
-                        product.getExpiringDate(), product.getCategoryName(), product.getCategoryId()});
-        });
-    }
     }
 }

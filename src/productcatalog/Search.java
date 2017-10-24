@@ -54,10 +54,10 @@ public class Search {
 
     public static class SearchBuilder {
 
-        String name, color, category;
-        Double lowerPrice, higherPrice;
-        Date lowerExpiringDate, higherExpiringDate;
-        boolean inStock;
+        private String name, color, category;
+        private Double lowerPrice, higherPrice;
+        private Date lowerExpiringDate, higherExpiringDate;
+        private boolean inStock;
 
         public SearchBuilder name(String name) {
             if (name != null) {
@@ -96,6 +96,7 @@ public class Search {
         }
 
         public SearchBuilder lowerExpiringDate(Date lowerExpiringDate) {
+            System.out.println("searchBuilder exp date " + lowerExpiringDate);
             if (lowerExpiringDate != null) {
                 this.lowerExpiringDate = lowerExpiringDate;
             }
