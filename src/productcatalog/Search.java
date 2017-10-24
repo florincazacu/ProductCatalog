@@ -6,7 +6,7 @@ public class Search {
 
     private final String name, color, category;
     private final Double lowerPrice, higherPrice;
-    private final Date lowerDate, higherDate;
+    private final Date lowerExpiringDate, higherExpiringDate;
     private final boolean inStock;
 
     private Search(SearchBuilder searchBuilder) {
@@ -15,8 +15,8 @@ public class Search {
         this.category = searchBuilder.category;
         this.lowerPrice = searchBuilder.lowerPrice;
         this.higherPrice = searchBuilder.higherPrice;
-        this.lowerDate = searchBuilder.lowerExpiringDate;
-        this.higherDate = searchBuilder.higherExpiringDate;
+        this.lowerExpiringDate = searchBuilder.lowerExpiringDate;
+        this.higherExpiringDate = searchBuilder.higherExpiringDate;
         this.inStock = searchBuilder.inStock;
     }
 
@@ -41,49 +41,17 @@ public class Search {
     }
 
     public Date getLowerDate() {
-        return lowerDate;
+        return lowerExpiringDate;
     }
 
     public Date getHigherDate() {
-        return higherDate;
+        return higherExpiringDate;
     }
 
     public boolean getInStock() {
         return inStock;
     }
-
-    boolean hasName(String name) {
-        return name != null;
-    }
-
-    boolean hasColor(String color) {
-        return color != null;
-    }
-
-    boolean hasCategory(String category) {
-        return category != null;
-    }
-
-    boolean hasLowerPrice(double lowerPrice) {
-        return lowerPrice > 0;
-    }
-
-    boolean hasHigherPrice(double higherPrice) {
-        return higherPrice > 0;
-    }
-
-    boolean hasLowerDate(Date lowerDate){
-        return lowerDate != null;
-    }
-
-    boolean hasHgigherDate(Date higherDate){
-        return higherDate != null;
-    }
-
-    boolean isInStock(boolean inStock){
-        return inStock = true;
-    }
-
+    
     public static class SearchBuilder {
 
         String name, color, category;
@@ -113,17 +81,18 @@ public class Search {
         }
 
         public SearchBuilder lowerPrice(Double lowerPrice) {
-            if(lowerPrice != null){
+//            if(lowerPrice != null){
                 this.lowerPrice = lowerPrice;
-            }
-            return null;
+                return this;
+//            }
+//            return this;
         }
 
         public SearchBuilder higherPrice(Double higherPrice) {
-            if(higherPrice != null){
+//            if(higherPrice != null){
                 this.higherPrice = higherPrice;
-            }            
-            return null;
+//            }            
+            return this;
         }
 
         public SearchBuilder lowerExpiringDate(Date lowerExpiringDate) {

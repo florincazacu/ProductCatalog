@@ -271,7 +271,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         String categoryName = null, color = null;
         int categoryId = -1;
         String name = TextUtils.isEmpty(nameTextField.getText()) ? null : nameTextField.getText();
-        double price = TextUtils.isEmpty(priceTextField.getText()) ? -1 : Double.parseDouble(priceTextField.getText());
+        Double price = TextUtils.isEmpty(priceTextField.getText()) ? null : Double.parseDouble(priceTextField.getText());
         boolean inStock = setInStockCheckBox.isSelected();
         Date expiringDate = setExpiringDatePicker.getDate();
         if (setColorComboBox.getSelectedIndex() >= 0) {
@@ -1162,11 +1162,11 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
 
     private void searchProduct() {
         String name = TextUtils.isEmpty(searchNameTextField.getText()) ? null : searchNameTextField.getText();
-        Double lowerPrice;
-        Double higherPrice;
+        Double lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
+        Double higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
 
-        lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
-        higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
+//        lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
+//        higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
         System.out.println ("lp/hp " + lowerPrice + " " + higherPrice);
 
         String color = colorFilterComboBox.getSelectedItem().toString();
@@ -1185,7 +1185,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 .higherExpiringDate(higherExpiringDate)
                 .category(category)
                 .build();
-
+        
         catalogPresenter.searchProduct(search);
     }
 
