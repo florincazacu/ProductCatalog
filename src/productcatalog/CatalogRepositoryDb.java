@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CatalogRepositoryDb implements CatalogRepository {
 
@@ -19,6 +21,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
     private final String productCategoryDb = "product_category";
     private final String[] categories = {null, "Electronics", "Furniture", "Toys"};
     private final ArrayList<String> categoryNames = new ArrayList<>();
+    private final String joinedTablesQuery = "SELECT * FROM product_catalog JOIN product_category USING (category_id)";
 
     public CatalogRepositoryDb() {
         createCatalogTableIfNotExists();
@@ -57,7 +60,6 @@ public class CatalogRepositoryDb implements CatalogRepository {
                     + "color            VARCHAR(20),"
                     + "in_stock         BOOLEAN,"
                     + "expiring_date    DATE,"
-                    + "category_name    VARCHAR(50),"
                     + "category_id      INTEGER,"
                     + "FOREIGN KEY (category_id) REFERENCES product_category(category_id) "
                     + ")";
@@ -178,12 +180,12 @@ public class CatalogRepositoryDb implements CatalogRepository {
     @Override
     public int getProductNumber() {
         connectToDb();
-        int count = 0;
+        int productsNumber = 0;
         String rowCounter = "SELECT COUNT(*) AS count FROM " + productCatalogDb;
         try {
             try (ResultSet countRs = createStatement().executeQuery(rowCounter)) {
                 while (countRs.next()) {
-                    count = countRs.getInt(1);
+                    productsNumber = countRs.getInt(1);
                 }
             }
             disconnectFromDb();
@@ -191,16 +193,16 @@ public class CatalogRepositoryDb implements CatalogRepository {
             System.out.println("getProductNumber " + e.getMessage());
         }
 
-        return count;
-    }
-    
-    public int getPageCount(){
-                
-        return 0;
+        return productsNumber;
     }
 
     @Override
-    public ArrayList<Product> getProductList() {
+    public int getPageCount(int productsPerPage) {
+        return getProductNumber() / productsPerPage;
+    }
+
+    @Override
+    public ArrayList<Product> getProductList(int requestedPage, int itemsPerPage) {
         connectToDb();
         ArrayList<Product> productList = new ArrayList<>();
         String name, color, categoryName;
@@ -208,12 +210,11 @@ public class CatalogRepositoryDb implements CatalogRepository {
         boolean inStock;
         Date expiringDate;
         int categoryId, productId;
-//        String query = "SELECT * FROM (SELECT ROW_NUMBER() OVER() AS rownum, " + productCatalogDb + ".*"
-//                + " FROM " + productCatalogDb + " ) AS tmp WHERE rownum > 0 AND rownum <= 25";
-        
-       String query = "SELECT * FROM ( SELECT ROW_NUMBER() OVER() AS rownum, "+ productCatalogDb + ".*" + 
-               " FROM " + productCategoryDb + " JOIN " + productCatalogDb + 
-               " ON ( " + productCategoryDb + ".category_id = " + productCatalogDb + ".category_id)) AS tmp WHERE rownum > 30 AND rownum <= 50";
+
+        String query = "SELECT * FROM ( "
+                + "SELECT ROW_NUMBER() OVER() AS rownum, new_table.* "
+                + "FROM (" + joinedTablesQuery + ") new_table "
+                + ") AS tmp WHERE rownum > " + (requestedPage * itemsPerPage - itemsPerPage) + " AND rownum <= " + (requestedPage * itemsPerPage);
 
         try (ResultSet resultSet = createStatement().executeQuery(query)) {
             while (resultSet.next()) {
@@ -226,7 +227,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
                 categoryName = resultSet.getString("category_name");
                 categoryId = resultSet.getInt("category_id");
                 Product product = new Product.ProductBuilder()
-//                        .id(productId)
+                        .id(productId)
                         .name(name)
                         .price(price)
                         .color(color)
@@ -254,7 +255,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
                 categoryName = resultSet.getString("category_name");
                 categoryNames.add(categoryName);
             }
-            disconnectFromDb();            
+            disconnectFromDb();
         } catch (Exception e) {
             System.out.println("getCategoryList " + e);
         }
@@ -266,8 +267,98 @@ public class CatalogRepositoryDb implements CatalogRepository {
     }
 
     @Override
-    public void searchProduct(Search search) {
-        String sql = "SELECT FROM " + productCatalogDb + " WHERE name = ?, price = ?, color = ?, in_stock = ?, expiring_date = ?, category_id = ? LIMIT 25, 25";
+    public ArrayList<Product> searchProduct(Search search) {
+        System.out.println("searchProduct");
+        ArrayList<Product> productList = new ArrayList<>();
+//        String sql = "SELECT FROM " + joinedTablesQuery + " WHERE name = ?, price = ?, color = ?, in_stock = ?, expiring_date = ?, category_id = ? LIMIT 25, 25";
+        System.out.println(search.getName() + " " + search.getLowerPrice() + " " + search.getHigherPrice() + " " + search.getColor() + " "
+                + search.getLowerDate() + " " + search.getHigherDate() + " " + search.getCategory());
+
+        StringBuilder searchQuery = new StringBuilder();
+        searchQuery.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE ( ");
+        if (search.getName() != null) {
+            System.out.println("append name " + search.getName());
+            searchQuery.append("name like '%").append(search.getName()).append("%' AND");
+        }
+        if (search.getLowerPrice() != null) {
+            System.out.println("append lowerPrice " + search.getLowerPrice());
+            searchQuery.append("price >= ").append(search.getLowerPrice()).append(") AND");
+        }
+        if (search.getHigherPrice() != null) {
+            System.out.println("append higherPrice " + search.getHigherPrice());
+            searchQuery.append("(price <= ").append(search.getHigherPrice()).append(") AND");
+        }
+        if (search.getColor() != null && !search.getColor().equals("-ANY-") ) {
+            System.out.println("append color " + search.getColor());
+            searchQuery.append("(color = '").append(search.getColor()).append("' ) ");
+        }
+        if (search.getLowerDate() != null) {
+            System.out.println("append lowerDate " + search.getLowerDate());
+            searchQuery.append("price >= ").append(search.getLowerDate()).append(") AND");
+        }
+        if (search.getHigherDate() != null) {
+            System.out.println("append higherDate " + search.getHigherDate());
+            searchQuery.append("(price <= ").append(search.getHigherDate()).append(") AND");
+        }
+        if (search.getCategory() != null) {
+            System.out.println("append category " + search.getCategory());
+            searchQuery.append("(color = '").append(search.getCategory()).append("' ) ");
+        }
+        
+        System.out.println("searchQuery " + searchQuery);
+
+        String query = "SELECT * FROM "
+                + "(SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table "
+                + "WHERE ( "
+                + "name like '%" + search.getName() + "%' "
+                + "AND(price >= " + search.getLowerPrice() + ") AND(price <= " + search.getHigherPrice() + ") "
+                + "AND(color = '" + search.getColor() + "' ) "
+                + "AND(expiring_date >= '" + search.getLowerDate() + "' ) AND(expiring_date <= '" + search.getHigherDate() + "') "
+                + "AND(category_name like '" + search.getCategory() + "')"
+                + ")";
+
+        try {
+            connectToDb();
+            try (PreparedStatement preparedStatement = connection.prepareStatement(searchQuery.toString())) {
+                preparedStatement.executeQuery();
+            }
+            disconnectFromDb();
+        } catch (SQLException ex) {
+            Logger.getLogger(CatalogRepositoryDb.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+//        try {
+//            connectToDb();
+//            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+//                preparedStatement.setString(1, search.getName());
+//                preparedStatement.setDouble(2, search.getPrice());
+//                preparedStatement.setString(3, product.getColor());
+//                preparedStatement.setBoolean(4, product.getInStock());
+//                preparedStatement.setDate(5, (new java.sql.Date(product.getExpiringDate().getTime())));
+//                preparedStatement.setInt(6, product.getCategoryId());
+//                preparedStatement.setInt(7, productId);
+//                preparedStatement.executeUpdate();
+//
+////                pstmt = conn.prepareStatement("select * FROM Courses WHERE "
+////                        + "product = ? "
+////                        + "and location = ? "
+////                        + "and courseType = ? "
+////                        + "and category = ?");
+//                preparedStatement.setString(1, product);
+//                preparedStatement.setString(2, location);
+//                preparedStatement.setString(3, courseType);
+//                preparedStatement.setString(4, category);
+//            }
+//            disconnectFromDb();
+//        } catch (SQLException e) {
+//            System.out.println("modifyProduct" + e.getMessage());
+//        }
+        return productList;
+    }
+
+    @Override
+    public void goToPage(int requestedPage, int itemsPerPage) {
+
     }
 
 }

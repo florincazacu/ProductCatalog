@@ -46,18 +46,28 @@ public class CatalogPresenter implements CatalogContract.UserActions {
     @Override
     public void searchProduct(Search search) {
         catalogRepository.searchProduct(search);
+        view.displaySearchResults(catalogRepository.searchProduct(search));
     }
 
-    public void getProductsFromDb() {
-        view.displayProductsTable(catalogRepository.getProductList());
+    public void getProductsFromDb(int requestedPage, int itemsPerPage) {
+        view.displayProductsTable(catalogRepository.getProductList(requestedPage, itemsPerPage));
     }
 
     public void getProductsNumber() {
         view.displayFoundProductsNumber(catalogRepository.getProductNumber());
     }
+    
+    public void getPagesNumber(int productsPerPage){
+        view.displayPagesNumber(catalogRepository.getPageCount(productsPerPage));
+    }
 
     public ArrayList<String> getCategoriesFromDb() {
         return catalogRepository.getCategoryList();
+    }
+
+    void goToPage(int requestedPage, int itemsPerPage) {
+        view.displayProductsTable(catalogRepository.getProductList(requestedPage, itemsPerPage));
+        
     }
 
 }

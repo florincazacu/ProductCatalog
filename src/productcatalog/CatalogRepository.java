@@ -10,12 +10,16 @@ public interface CatalogRepository {
 
     void deleteProduct(String productIds);
 
-    ArrayList<Product> getProductList();
+    ArrayList<Product> getProductList(int requestedPage, int itemsPerPage);
 
     ArrayList<String> getCategoryList();
 
-    void searchProduct(Search search);
+    ArrayList<Product> searchProduct(Search search);
     
     int getProductNumber();
+    
+    int getPageCount(int productsPerPage);
+
+    public void goToPage(int requestedPage, int itemsPerPage);
 
 }

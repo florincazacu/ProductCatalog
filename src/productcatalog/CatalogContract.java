@@ -27,6 +27,12 @@ public class CatalogContract {
         void closeAddProductDialog();
 
         void displayFoundProductsNumber(int productNumber);
+        
+        void displayPagesNumber(int pagesNumber);
+        
+        void displayPage();
+
+        public void displaySearchResults(ArrayList<Product> products);
 
     }
 
