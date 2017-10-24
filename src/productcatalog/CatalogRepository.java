@@ -14,7 +14,7 @@ public interface CatalogRepository {
 
     ArrayList<String> getCategoryList();
 
-    ArrayList<Product> searchProduct(Search search);
+    ArrayList<Product> searchProduct(Search search, int requestedPage, int itemsPerPage);
     
     int getProductNumber();
     

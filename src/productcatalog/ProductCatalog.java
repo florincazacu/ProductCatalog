@@ -259,7 +259,9 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 .category(category)
                 .build();
 
-        catalogPresenter.searchProduct(search);
+        int requestedPage = Integer.parseInt(pagesTextField.getText());
+        int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
+        catalogPresenter.searchProduct(search, requestedPage, itemsPerPage);
     }
 
     @Override
@@ -1028,12 +1030,9 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
     private void nextPageButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_nextPageButtonActionPerformed
         currentPage = Integer.parseInt(pagesTextField.getText());
         int itemsPerPage = (int) itemsPerPageComboBox.getSelectedItem();
-        System.out.println("maxP " + maxPage);
-        System.out.println("currP " + currentPage);
         if (currentPage > maxPage) {
             currentPage = maxPage - 1;
         }
-        System.out.println("currP " + currentPage);
         if (currentPage < maxPage) {
             int nextPage = ++currentPage;
 

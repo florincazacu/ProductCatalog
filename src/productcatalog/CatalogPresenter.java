@@ -44,9 +44,9 @@ public class CatalogPresenter implements CatalogContract.UserActions {
     }
 
     @Override
-    public void searchProduct(Search search) {
-        catalogRepository.searchProduct(search);
-        view.displaySearchResults(catalogRepository.searchProduct(search));
+    public void searchProduct(Search search, int requestedPage, int itemsPerPage) {
+        catalogRepository.searchProduct(search, requestedPage, itemsPerPage);
+        view.displaySearchResults(catalogRepository.searchProduct(search, requestedPage, itemsPerPage));
     }
 
     public void getProductsFromDb(int requestedPage, int itemsPerPage) {

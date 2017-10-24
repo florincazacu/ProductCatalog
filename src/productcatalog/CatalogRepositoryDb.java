@@ -268,7 +268,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
     }
 
     @Override
-    public ArrayList<Product> searchProduct(Search search) {
+    public ArrayList<Product> searchProduct(Search search, int requestedPage, int itemsPerPage) {
         ArrayList<Product> productList = new ArrayList<>();
         String name, color, categoryName;
         Double price;
@@ -277,7 +277,14 @@ public class CatalogRepositoryDb implements CatalogRepository {
         int categoryId, productId;
 
         StringBuilder searchQueryStart = new StringBuilder();
-        searchQueryStart.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE 1 = 1 ");
+//        searchQueryStart.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE ");
+        searchQueryStart.append("SELECT * FROM ( SELECT ROW_NUMBER() OVER() AS rownum, new_table.* FROM (")
+                .append(joinedTablesQuery)
+                .append(") new_table)")
+                .append("AS new_table WHERE");
+        
+        searchQueryStart.append(" rownum > ").append(requestedPage * itemsPerPage - itemsPerPage).append(" AND rownum <= ").append(requestedPage * itemsPerPage);
+                
         StringBuilder searchQueryEnd = new StringBuilder();
         if (search.getName() != null) {
             searchQueryEnd.append("AND UPPER (name) like UPPER ('%").append(search.getName()).append("%') ");
@@ -310,6 +317,8 @@ public class CatalogRepositoryDb implements CatalogRepository {
         }
 
         StringBuilder searchQuery = new StringBuilder();
+        
+        searchQueryEnd.append(" AND rownum > ").append(requestedPage * itemsPerPage - itemsPerPage).append(" AND rownum <= ").append(requestedPage * itemsPerPage);
 
         searchQuery.append(searchQueryStart).append(searchQueryEnd);
 

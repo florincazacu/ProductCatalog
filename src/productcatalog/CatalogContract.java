@@ -12,7 +12,7 @@ public class CatalogContract {
 
         void modifyProduct(Product product, int productId);
         
-        void searchProduct(Search search);
+        void searchProduct(Search search, int requestedPage, int itemsPerPage);
 
     }
 
