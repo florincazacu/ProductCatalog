@@ -206,7 +206,7 @@ public class CatalogRepositoryDb implements CatalogRepository {
         connectToDb();
         ArrayList<Product> productList = new ArrayList<>();
         String name, color, categoryName;
-        double price;
+        Double price;
         boolean inStock;
         Date expiringDate;
         int categoryId, productId;
@@ -268,63 +268,76 @@ public class CatalogRepositoryDb implements CatalogRepository {
 
     @Override
     public ArrayList<Product> searchProduct(Search search) {
-        System.out.println("searchProduct");
         ArrayList<Product> productList = new ArrayList<>();
-//        String sql = "SELECT FROM " + joinedTablesQuery + " WHERE name = ?, price = ?, color = ?, in_stock = ?, expiring_date = ?, category_id = ? LIMIT 25, 25";
-        System.out.println(search.getName() + " " + search.getLowerPrice() + " " + search.getHigherPrice() + " " + search.getColor() + " "
-                + search.getLowerDate() + " " + search.getHigherDate() + " " + search.getCategory());
+        String name, color, categoryName;
+        Double price;
+        boolean inStock;
+        Date expiringDate;
+        int categoryId, productId;
 
-        StringBuilder searchQuery = new StringBuilder();
-        searchQuery.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE ( ");
+        StringBuilder searchQueryStart = new StringBuilder();
+        searchQueryStart.append("SELECT * FROM (SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table WHERE ( ");
+        StringBuilder searchQueryEnd = new StringBuilder();
         if (search.getName() != null) {
-            System.out.println("append name " + search.getName());
-            searchQuery.append("name like '%").append(search.getName()).append("%' AND");
+            searchQueryEnd.append("UPPER (name) like UPPER ('%").append(search.getName()).append("%') ");
         }
         if (search.getLowerPrice() != null) {
-            System.out.println("append lowerPrice " + search.getLowerPrice());
-            searchQuery.append("price >= ").append(search.getLowerPrice()).append(") AND");
+            searchQueryEnd.append("AND price >= ").append(search.getLowerPrice()).append(" ");
         }
         if (search.getHigherPrice() != null) {
-            System.out.println("append higherPrice " + search.getHigherPrice());
-            searchQuery.append("(price <= ").append(search.getHigherPrice()).append(") AND");
+            searchQueryEnd.append("AND price <= ").append(search.getHigherPrice()).append(" ");
         }
-        if (search.getColor() != null && !search.getColor().equals("-ANY-") ) {
-            System.out.println("append color " + search.getColor());
-            searchQuery.append("(color = '").append(search.getColor()).append("' ) ");
+        if (search.getColor() != null && !search.getColor().equals("-ANY-")) {
+            searchQueryEnd.append("AND color = '").append(search.getColor()).append("' ");
         }
         if (search.getLowerDate() != null) {
-            System.out.println("append lowerDate " + search.getLowerDate());
-            searchQuery.append("price >= ").append(search.getLowerDate()).append(") AND");
+            searchQueryEnd.append("AND expiring_date >= ").append(search.getLowerDate()).append(" ");
         }
         if (search.getHigherDate() != null) {
-            System.out.println("append higherDate " + search.getHigherDate());
-            searchQuery.append("(price <= ").append(search.getHigherDate()).append(") AND");
+            searchQueryEnd.append("AND expiring_date <= ").append(search.getHigherDate()).append(" ");
         }
-        if (search.getCategory() != null) {
-            System.out.println("append category " + search.getCategory());
-            searchQuery.append("(color = '").append(search.getCategory()).append("' ) ");
+        if (search.getCategory() != null && !search.getCategory().equals("-ANY-")) {
+            searchQueryEnd.append("AND color = '").append(search.getCategory()).append("' ) ");
         }
         
-        System.out.println("searchQuery " + searchQuery);
+        StringBuilder searchQuery = new StringBuilder();
+        
+        searchQuery.append(searchQueryStart).append(searchQueryEnd).append(")");
+        
+        searchQueryStart.append(searchQueryEnd).append(")");
 
-        String query = "SELECT * FROM "
-                + "(SELECT * FROM product_catalog JOIN product_category USING (category_id)) new_table "
-                + "WHERE ( "
-                + "name like '%" + search.getName() + "%' "
-                + "AND(price >= " + search.getLowerPrice() + ") AND(price <= " + search.getHigherPrice() + ") "
-                + "AND(color = '" + search.getColor() + "' ) "
-                + "AND(expiring_date >= '" + search.getLowerDate() + "' ) AND(expiring_date <= '" + search.getHigherDate() + "') "
-                + "AND(category_name like '" + search.getCategory() + "')"
-                + ")";
-
-        try {
-            connectToDb();
-            try (PreparedStatement preparedStatement = connection.prepareStatement(searchQuery.toString())) {
-                preparedStatement.executeQuery();
+        if (searchQueryEnd.length() > 0) {
+            try {
+                connectToDb();
+                try (PreparedStatement preparedStatement = connection.prepareStatement(searchQuery.toString())) {
+                    preparedStatement.executeQuery();
+                    ResultSet resultSet = preparedStatement.executeQuery();
+                    while (resultSet.next()) {
+                        productId = resultSet.getInt("product_id");
+                        name = resultSet.getString("name");
+                        price = resultSet.getDouble("price");
+                        color = resultSet.getString("color");
+                        inStock = resultSet.getBoolean("in_stock");
+                        expiringDate = resultSet.getDate("expiring_date");
+                        categoryName = resultSet.getString("category_name");
+                        categoryId = resultSet.getInt("category_id");
+                        Product product = new Product.ProductBuilder()
+                                .id(productId)
+                                .name(name)
+                                .price(price)
+                                .color(color)
+                                .inStock(inStock)
+                                .expiringDate(expiringDate)
+                                .categoryName(categoryName)
+                                .categoryId(categoryId)
+                                .build();
+                        productList.add(product);
+                    }
+                }
+                disconnectFromDb();
+            } catch (SQLException ex) {
+                Logger.getLogger(CatalogRepositoryDb.class.getName()).log(Level.SEVERE, null, ex);
             }
-            disconnectFromDb();
-        } catch (SQLException ex) {
-            Logger.getLogger(CatalogRepositoryDb.class.getName()).log(Level.SEVERE, null, ex);
         }
 
 //        try {

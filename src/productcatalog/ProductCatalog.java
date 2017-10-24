@@ -1165,10 +1165,6 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
         Double lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
         Double higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
 
-//        lowerPrice = TextUtils.isEmpty(searchPriceFromTextField.getText()) ? null : Double.parseDouble(searchPriceFromTextField.getText());
-//        higherPrice = TextUtils.isEmpty(searchPriceToTextField.getText()) ? null : Double.parseDouble(searchPriceToTextField.getText());
-        System.out.println ("lp/hp " + lowerPrice + " " + higherPrice);
-
         String color = colorFilterComboBox.getSelectedItem().toString();
         String category = categoryFilterComboBox.getSelectedItem().toString();
         boolean inStock = inStockCheckBox.isSelected();
@@ -1185,7 +1181,7 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
                 .higherExpiringDate(higherExpiringDate)
                 .category(category)
                 .build();
-        
+
         catalogPresenter.searchProduct(search);
     }
 
@@ -1196,11 +1192,13 @@ public class ProductCatalog extends javax.swing.JFrame implements CatalogContrac
 
     @Override
     public void displaySearchResults(ArrayList<Product> products) {
+        if (products.size() > 0){
         defaultTableModel.setRowCount(0);
         products.forEach((product) -> {
             defaultTableModel.insertRow(productsCatalogTable.getRowCount(),
                     new Object[]{product.getId(), product.getName(), product.getPrice(), product.getColor(), product.getInStock(),
                         product.getExpiringDate(), product.getCategoryName(), product.getCategoryId()});
         });
+    }
     }
 }

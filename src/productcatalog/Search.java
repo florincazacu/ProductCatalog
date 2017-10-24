@@ -51,61 +51,61 @@ public class Search {
     public boolean getInStock() {
         return inStock;
     }
-    
+
     public static class SearchBuilder {
 
         String name, color, category;
-        double lowerPrice, higherPrice;
+        Double lowerPrice, higherPrice;
         Date lowerExpiringDate, higherExpiringDate;
         boolean inStock;
 
         public SearchBuilder name(String name) {
-            if(name != null){
+            if (name != null) {
                 this.name = name;
-            }            
+            }
             return this;
         }
 
         public SearchBuilder color(String color) {
-            if(color != null){
+            if (color != null) {
                 this.color = color;
-            }            
+            }
             return this;
         }
 
         public SearchBuilder category(String category) {
-            if(category != null){
+            if (category != null) {
                 this.category = category;
-            }            
+            }
             return this;
         }
 
         public SearchBuilder lowerPrice(Double lowerPrice) {
-//            if(lowerPrice != null){
+            if (lowerPrice != null) {
                 this.lowerPrice = lowerPrice;
                 return this;
-//            }
-//            return this;
+            }
+            return this;
         }
 
         public SearchBuilder higherPrice(Double higherPrice) {
-//            if(higherPrice != null){
+            if (higherPrice != null) {
                 this.higherPrice = higherPrice;
-//            }            
+            }
             return this;
         }
 
         public SearchBuilder lowerExpiringDate(Date lowerExpiringDate) {
-            if(lowerExpiringDate != null){
+            if (lowerExpiringDate != null) {
                 this.lowerExpiringDate = lowerExpiringDate;
-            }            
+            }
             return this;
         }
 
         public SearchBuilder higherExpiringDate(Date higherExpiringDate) {
-            if(higherExpiringDate != null){
-                this.higherExpiringDate = higherExpiringDate;                
-            }            
+            if (higherExpiringDate != null) {
+                this.higherExpiringDate = higherExpiringDate;
+            }
             return this;
         }
 
